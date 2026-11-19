@@ -12,13 +12,13 @@ import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 
-import { normalizeText } from './core/normalize.js';
-import { countWords, validateProject, reviewAsJudge } from './core/validator.js';
-import { SECTIONS_META, OVERVIEW_GUIDE, PROMPTS_DEF, EVALUATION_DIMENSIONS } from './core/guides.js';
-import { createDefaultProject } from './core/sample-data.js';
-import { parseMarkdownToIR } from './core/md-parser.js';
-import { irToHtml } from './core/ir-to-html.js';
-import { buildDocxDocument } from './core/docx-builder.js';
+import { normalizeText } from './js/core/normalize.js';
+import { countWords, validateProject, reviewAsJudge } from './js/core/validator.js';
+import { SECTIONS_META, OVERVIEW_GUIDE, PROMPTS_DEF, EVALUATION_DIMENSIONS } from './js/core/guides.js';
+import { createDefaultProject } from './js/core/sample-data.js';
+import { parseMarkdownToIR } from './js/core/md-parser.js';
+import { irToHtml } from './js/core/ir-to-html.js';
+import { buildDocxDocument } from './js/core/docx-builder.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

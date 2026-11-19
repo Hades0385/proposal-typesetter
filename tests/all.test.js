@@ -8,12 +8,12 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import { normalizeText, normalizeLine } from '../core/normalize.js';
-import { parseMarkdownToIR, getChineseNumber } from '../core/md-parser.js';
-import { irToHtml } from '../core/ir-to-html.js';
-import { countWords, validateProject, reviewAsJudge } from '../core/validator.js';
-import { createDefaultProject } from '../core/sample-data.js';
-import { buildDocxDocument } from '../core/docx-builder.js';
+import { normalizeText, normalizeLine } from '../js/core/normalize.js';
+import { parseMarkdownToIR, getChineseNumber } from '../js/core/md-parser.js';
+import { irToHtml } from '../js/core/ir-to-html.js';
+import { countWords, validateProject, reviewAsJudge } from '../js/core/validator.js';
+import { createDefaultProject } from '../js/core/sample-data.js';
+import { buildDocxDocument } from '../js/core/docx-builder.js';
 
 let passed = 0;
 let failed = 0;
