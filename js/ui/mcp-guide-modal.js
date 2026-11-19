@@ -176,7 +176,8 @@ export function renderMcpGuide(container) {
                 <tr><td><code>validate_project</code></td><td>執行 V001–V010 規則檢查器</td><td><code>projectId, section?</code></td></tr>
                 <tr><td><code>review_as_judge</code></td><td>評審視角 7 維度評分與交叉檢查</td><td><code>projectId</code></td></tr>
                 <tr><td><code>get_stats</code></td><td>字數、段落數與圖表數統計</td><td><code>projectId</code></td></tr>
-                <tr><td><code>export_docx</code></td><td>產出標準大專生排版 Word 檔</td><td><code>projectId, force?</code></td></tr>
+                <tr><td><code>export_docx</code></td><td>產出標準大專生排版 Word 檔（版面與預覽一致，含封面、目錄、頁碼、Times 與標楷體排版）</td><td><code>projectId, force?</code></td></tr>
+                <tr><td><code>export_pdf</code></td><td>產出高品質向量 A4 PDF 檔（100% 呈現預覽排版與分頁成果）</td><td><code>projectId, force?</code></td></tr>
               </tbody>
             </table>
           </div>

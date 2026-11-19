@@ -152,8 +152,8 @@ t261114/
 | AC-03 | 中文標楷體、英文數字 Times New Roman | ✔ CSS 與 Word `rFonts` 逐字正確設定 |
 | AC-04 | Markdown 子集轉換（標題、表格、粗斜體、程式碼、圖片、強制分頁等） | ✔ 完整支援 IR 解析與渲染 |
 | AC-05 | 封面、目錄、頁碼完整性 | ✔ 封面無頁碼、目錄羅馬頁碼 `i`、本文阿拉伯頁碼 `1` |
-| AC-06 | 一鍵匯出 Word 與 PDF | ✔ 支援純前端 `.docx` 生成下載與 `@media print` A4 PDF 列印 |
-| AC-07 | MCP 工具完整提供 | ✔ `mcp-server.js` 內建 17 項 Tools、Resources 與 Prompts |
+| AC-06 | 一鍵匯出 Word 與 PDF | ✔ 支援純前端與本地 MCP 伺服器匯出 `.docx` 與向量 A4 `.pdf`，版面與預覽一致 |
+| AC-07 | MCP 工具完整提供 | ✔ `mcp-server.js` 內建 18 項 Tools、Resources 與 Prompts（含 `export_pdf`） |
 | AC-08 | `get_writing_guide` 指南 | ✔ 回傳七章目的、必含要素、禁忌、建議字數與評審提問 |
 | AC-09 | 即時更新與版本快照 | ✔ 支援每秒自動儲存與最近 20 個版本快照還原 |
 | AC-10 | 評審視角審查（Validator、review_as_judge） | ✔ 具備 7 大構面評分卡、V001–V010 檢查報告與交叉檢查 |

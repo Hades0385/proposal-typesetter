@@ -19,6 +19,7 @@ import { createDefaultProject } from './js/core/sample-data.js';
 import { parseMarkdownToIR } from './js/core/md-parser.js';
 import { irToHtml } from './js/core/ir-to-html.js';
 import { buildDocxDocument } from './js/core/docx-builder.js';
+import { exportProjectToPdf } from './js/core/pdf-renderer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -283,6 +284,18 @@ const TOOLS = [
   {
     name: 'export_docx',
     description: '匯出標準排版 Word (.docx) 檔（含封面、目錄、頁碼、Times New Roman 與標楷體中英混排）',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId'],
+      properties: {
+        projectId: { type: 'string', description: '專案代號' },
+        force: { type: 'boolean', description: '若有 error 級檢查問題是否仍強制匯出（預設 false）' }
+      }
+    }
+  },
+  {
+    name: 'export_pdf',
+    description: '匯出標準排版 PDF 檔（版面與即時預覽 100% 一致，含封面、目錄、頁碼、標楷體與 Times New Roman 排版）',
     inputSchema: {
       type: 'object',
       required: ['projectId'],
@@ -603,8 +616,43 @@ async function handleToolCall(name, args) {
       };
     }
 
+    case 'export_pdf': {
+      const proj = loadProject(args.projectId);
+      const issues = validateProject(proj);
+      const errors = issues.filter(i => i.level === 'error');
+
+      if (errors.length > 0 && !args.force) {
+        return {
+          ok: false,
+          error: '計畫書尚有 error 級未修正問題，請修正或傳入 force: true 強制匯出。',
+          errors
+        };
+      }
+
+      const title = proj.cover?.titleZh ? proj.cover.titleZh.replace(/[\\/:*?"<>|]/g, '') : '專案計劃書';
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `${title}_${dateStr}.pdf`;
+      const outPath = path.join(DATA_DIR, fileName);
+
+      const pdfResult = await exportProjectToPdf(proj, outPath);
+
+      return {
+        ok: true,
+        fileName,
+        filePath: outPath,
+        fileSize: pdfResult.fileSize,
+        message: `PDF 計畫書已成功產出（版面與即時預覽一致）：${fileName}`
+      };
+    }
+
     case 'export_all': {
       const docxResult = await handleToolCall('export_docx', { projectId: args.projectId, force: true });
+      let pdfResult = null;
+      try {
+        pdfResult = await handleToolCall('export_pdf', { projectId: args.projectId, force: true });
+      } catch (err) {
+        pdfResult = { ok: false, error: err.message };
+      }
       const proj = loadProject(args.projectId);
       const jsonFileName = `${proj.cover?.titleZh || 'proposal'}_backup.json`;
       const jsonPath = path.join(DATA_DIR, jsonFileName);
@@ -613,6 +661,7 @@ async function handleToolCall(name, args) {
       return {
         ok: true,
         docx: docxResult,
+        pdf: pdfResult,
         jsonBackup: { fileName: jsonFileName, filePath: jsonPath }
       };
     }

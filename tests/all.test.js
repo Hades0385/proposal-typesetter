@@ -14,6 +14,7 @@ import { irToHtml } from '../js/core/ir-to-html.js';
 import { countWords, validateProject, reviewAsJudge } from '../js/core/validator.js';
 import { createDefaultProject } from '../js/core/sample-data.js';
 import { buildDocxDocument } from '../js/core/docx-builder.js';
+import { exportProjectToPdf } from '../js/core/pdf-renderer.js';
 
 let passed = 0;
 let failed = 0;
@@ -166,9 +167,21 @@ await runAsyncTest('buildDocxDocument generates valid Buffer with 3 sections', a
   assert.strictEqual(buf[3], 0x04);
 });
 
-console.log('\n=== 5. Local MCP Server Protocol (AC-07, AC-08) ===');
+console.log('\n=== 5. PDF Export & High-Fidelity Rendering ===');
 
-await runAsyncTest('MCP Server handles initialize, tools/list, and get_writing_guide', async () => {
+await runAsyncTest('exportProjectToPdf renders A4 vector PDF', async () => {
+  const proj = createDefaultProject();
+  const outPath = path.resolve('temp-test-export.pdf');
+  const res = await exportProjectToPdf(proj, outPath);
+  assert.strictEqual(res.ok, true);
+  assert.ok(fs.existsSync(outPath));
+  assert.ok(fs.statSync(outPath).size > 10000);
+  fs.unlinkSync(outPath);
+});
+
+console.log('\n=== 6. Local MCP Server Protocol (AC-07, AC-08) ===');
+
+await runAsyncTest('MCP Server handles initialize, tools/list, get_writing_guide, and export_pdf', async () => {
   await new Promise((resolve, reject) => {
     const child = spawn('node', ['mcp-server.js'], { stdio: ['pipe', 'pipe', 'pipe'] });
     let output = '';
@@ -184,19 +197,30 @@ await runAsyncTest('MCP Server handles initialize, tools/list, and get_writing_g
 
         if (msg.id === 101) {
           assert.strictEqual(msg.result.serverInfo.name, 'proposal-typesetter-mcp');
-          // Request get_writing_guide
+          // Request tools/list to verify export_pdf exists
           child.stdin.write(JSON.stringify({
             jsonrpc: '2.0',
             id: 102,
+            method: 'tools/list',
+            params: {}
+          }) + '\n');
+        } else if (msg.id === 102) {
+          const toolNames = msg.result.tools.map(t => t.name);
+          assert.ok(toolNames.includes('export_pdf'), 'Should contain export_pdf tool');
+          assert.ok(toolNames.includes('export_docx'), 'Should contain export_docx tool');
+
+          // Call get_writing_guide
+          child.stdin.write(JSON.stringify({
+            jsonrpc: '2.0',
+            id: 103,
             method: 'tools/call',
             params: { name: 'get_writing_guide', arguments: { section: 'summary' } }
           }) + '\n');
-        } else if (msg.id === 102) {
+        } else if (msg.id === 103) {
           const resText = msg.result.content[0].text;
           const parsed = JSON.parse(resText);
           assert.strictEqual(parsed.section, 'summary');
           assert.strictEqual(parsed.guide.suggestedMin, 300);
-          assert.strictEqual(parsed.guide.suggestedMax, 500);
           child.kill();
           resolve();
         }

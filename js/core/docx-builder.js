@@ -1,6 +1,7 @@
 /**
  * DOCX Document Builder
- * Generates Word (.docx) conforming to Section 3, 6, and 10
+ * Generates Word (.docx) strictly conforming to Section 3, 6, and 10
+ * Optimized to match the web preview's typesetting, fonts, margins, and page layout
  */
 
 import { SECTIONS_META } from './guides.js';
@@ -44,7 +45,8 @@ export async function buildDocxDocument(project, injectedDocx = null) {
   const {
     Document, Paragraph, TextRun, Table, TableRow, TableCell,
     HeadingLevel, AlignmentType, WidthType, BorderStyle, ShadingType,
-    Footer, PageNumber, NumberFormat, ImageRun, TableOfContents
+    Footer, PageNumber, NumberFormat, ImageRun, TableOfContents,
+    TabStopType, TabStopPosition, LeaderType
   } = docx;
 
   const cover = project.cover || {};
@@ -52,6 +54,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
   const settings = project.settings || {};
   const images = project.images || {};
 
+  // Exact Font Specification (Section 3.1): Chinese: 標楷體, English/Numbers: Times New Roman
   const fontConfig = {
     ascii: 'Times New Roman',
     hAnsi: 'Times New Roman',
@@ -59,14 +62,14 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     cs: 'Times New Roman'
   };
 
+  // Page Margins (Section 3.2): Top 2.54cm, Bottom 2.54cm, Left 3.17cm, Right 3.17cm
   const pageMargins = {
-    top: 1440,    // 2.54 cm
+    top: 1440,    // 2.54 cm = 1 inch = 1440 twips
     bottom: 1440, // 2.54 cm
-    left: 1797,   // 3.17 cm
+    left: 1797,   // 3.17 cm = 1.248 inch = 1797 twips
     right: 1797   // 3.17 cm
   };
 
-  // Helper to create TextRun with standard font
   function makeRun(text, opts = {}) {
     return new TextRun({
       text,
@@ -76,12 +79,12 @@ export async function buildDocxDocument(project, injectedDocx = null) {
   }
 
   // -------------------------------------------------------------
-  // SECTION 1: COVER PAGE
+  // SECTION 1: COVER PAGE (A4, Centered Layout)
   // -------------------------------------------------------------
   const coverChildren = [];
 
   // Top spacing
-  coverChildren.push(new Paragraph({ spacing: { before: 720, after: 240 } }));
+  coverChildren.push(new Paragraph({ spacing: { before: 480, after: 120 } }));
 
   // Logo (if any)
   if (cover.logoImageId && images[cover.logoImageId]) {
@@ -91,11 +94,11 @@ export async function buildDocxDocument(project, injectedDocx = null) {
       const bytes = base64ToUint8Array(cleanB64);
       coverChildren.push(new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 360 },
+        spacing: { after: 240 },
         children: [
           new ImageRun({
             data: bytes,
-            transformation: { width: 120, height: 120 }
+            transformation: { width: 110, height: 110 }
           })
         ]
       }));
@@ -104,50 +107,50 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     }
   }
 
-  // Organization
+  // Organization (16 pt bold, centered)
   if (cover.organization) {
     coverChildren.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 240 },
       children: [
-        makeRun(cover.organization, { size: 32, bold: true }) // 16 pt
+        makeRun(cover.organization, { size: 32, bold: true })
       ]
     }));
   }
 
-  // Category
-  const categoryText = cover.category || '專案研究計畫書';
+  // Category (20 pt bold, centered)
+  const categoryText = cover.category || '大專生專題研究計畫書';
   coverChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { after: 1200 },
+    spacing: { after: 720 },
     children: [
-      makeRun(categoryText, { size: 40, bold: true }) // 20 pt
+      makeRun(categoryText, { size: 40, bold: true })
     ]
   }));
 
-  // Chinese Title
+  // Chinese Title (24 pt bold, centered)
   coverChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { after: 360 },
+    spacing: { after: 240, line: 360 },
     children: [
-      makeRun(cover.titleZh || '計畫中文名稱', { size: 48, bold: true }) // 24 pt
+      makeRun(cover.titleZh || '計畫中文名稱', { size: 48, bold: true })
     ]
   }));
 
-  // English Title
+  // English Title (16 pt italic, Times New Roman, centered)
   if (cover.titleEn) {
     coverChildren.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { after: 1440 },
+      spacing: { after: 840 },
       children: [
-        makeRun(cover.titleEn, { size: 32, italics: true }) // 16 pt
+        makeRun(cover.titleEn, { size: 32, italics: true })
       ]
     }));
   } else {
-    coverChildren.push(new Paragraph({ spacing: { after: 1440 } }));
+    coverChildren.push(new Paragraph({ spacing: { after: 840 } }));
   }
 
-  // Members & Advisors Info Table
+  // Info Table: Members & Advisors (Width 85%, Centered)
   const infoRows = [];
 
   // Members
@@ -177,7 +180,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
 
   if (infoRows.length > 0) {
     const infoTable = new Table({
-      width: { size: 80, type: WidthType.PERCENTAGE },
+      width: { size: 85, type: WidthType.PERCENTAGE },
       alignment: AlignmentType.CENTER,
       borders: {
         top: { style: BorderStyle.NONE },
@@ -192,13 +195,13 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     coverChildren.push(infoTable);
   }
 
-  // Bottom Submit Date
-  coverChildren.push(new Paragraph({ spacing: { before: 1800, after: 240 } }));
+  // Bottom Submit Date (14 pt bold, centered)
+  coverChildren.push(new Paragraph({ spacing: { before: 1200, after: 240 } }));
   const formattedDate = formatSubmitDate(cover.submitDate, settings.dateStyle || 'roc');
   coverChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
     children: [
-      makeRun(formattedDate, { size: 28, bold: true }) // 14 pt
+      makeRun(formattedDate, { size: 28, bold: true })
     ]
   }));
 
@@ -206,26 +209,63 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     return new TableRow({
       children: [
         new TableCell({
-          width: { size: 35, type: WidthType.PERCENTAGE },
+          width: { size: 38, type: WidthType.PERCENTAGE },
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
           children: [
             new Paragraph({
               alignment: AlignmentType.RIGHT,
-              spacing: { line: 360, before: 60, after: 60 },
+              spacing: { line: 360, before: 40, after: 40 },
               children: [makeRun(label, { size: 24, bold: true })]
             })
           ]
         }),
         new TableCell({
-          width: { size: 65, type: WidthType.PERCENTAGE },
+          width: { size: 62, type: WidthType.PERCENTAGE },
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
           children: value.split('\n').map(line =>
             new Paragraph({
               alignment: AlignmentType.LEFT,
-              spacing: { line: 360, before: 60, after: 60 },
+              spacing: { line: 360, before: 40, after: 40 },
               children: [makeRun(line, { size: 24 })]
             })
           )
         })
       ]
+    });
+  }
+
+  // -------------------------------------------------------------
+  // PRE-PARSE CHAPTERS & BUILD TOC ENTRIES
+  // -------------------------------------------------------------
+  const chapterEntries = [];
+  let figureCounter = 1;
+  let tableCounter = 1;
+
+  for (const meta of SECTIONS_META) {
+    const secData = sections[meta.key];
+    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
+    if (!meta.required && !md) continue;
+
+    const parseResult = parseMarkdownToIR(md, {
+      autoHeadingNumber: settings.autoHeadingNumber !== false,
+      figureStartIndex: figureCounter,
+      tableStartIndex: tableCounter
+    });
+    figureCounter = parseResult.figureCounter;
+    tableCounter = parseResult.tableCounter;
+
+    const headings = [];
+    for (const b of parseResult.blocks) {
+      if (b.type === 'heading' && b.level <= (settings.tocLevels || 2)) {
+        headings.push({ level: b.level, text: b.text });
+      }
+    }
+
+    chapterEntries.push({
+      meta,
+      title: `${meta.number}、${meta.title}`,
+      blocks: parseResult.blocks,
+      headings
     });
   }
 
@@ -246,65 +286,79 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     })
   ];
 
+  // Pre-formatted TOC fallback entries with dot leaders for immediate fidelity
+  let simPage = 1;
+  for (const ch of chapterEntries) {
+    tocChildren.push(new Paragraph({
+      tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX, leader: LeaderType.DOT }],
+      spacing: { line: 360, before: 60, after: 60 },
+      children: [
+        makeRun(ch.title, { size: 24, bold: true }),
+        new TextRun('\t'),
+        makeRun(String(simPage), { size: 22 })
+      ]
+    }));
+
+    for (const h of ch.headings) {
+      tocChildren.push(new Paragraph({
+        indent: { left: 360 },
+        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX, leader: LeaderType.DOT }],
+        spacing: { line: 360, before: 40, after: 40 },
+        children: [
+          makeRun(h.text, { size: 24 }),
+          new TextRun('\t'),
+          makeRun(String(simPage), { size: 22 })
+        ]
+      }));
+    }
+
+    const roughWords = ch.blocks.reduce((acc, b) => acc + (b.text ? b.text.length : 150), 0);
+    simPage += Math.max(1, Math.ceil(roughWords / 800));
+  }
+
   // -------------------------------------------------------------
   // SECTION 3: BODY CONTENT
   // -------------------------------------------------------------
   const bodyChildren = [];
-  let figureCounter = 1;
-  let tableCounter = 1;
   let isFirstChapter = true;
 
-  for (const meta of SECTIONS_META) {
-    const secData = sections[meta.key];
-    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
-
-    // If optional chapter is empty (e.g. references), skip per AC-01
-    if (!meta.required && !md) {
-      continue;
-    }
-
-    // Chapter Title: 16 pt bold, outlineLevel 1
-    const chapterTitleText = `${meta.number}、${meta.title}`;
+  for (const ch of chapterEntries) {
+    const meta = ch.meta;
     const pageBreakBefore = (!isFirstChapter && settings.chapterPageBreak !== false);
 
+    // Chapter Title: 16 pt bold, outlineLevel 1
     bodyChildren.push(new Paragraph({
       heading: HeadingLevel.HEADING_1,
       pageBreakBefore: pageBreakBefore,
       keepNext: true,
-      spacing: { before: 360, after: 240 },
+      spacing: { before: 360, after: 240, line: 360 },
       children: [
-        makeRun(chapterTitleText, { size: 32, bold: true }) // 16 pt
+        makeRun(ch.title, { size: 32, bold: true })
       ]
     }));
 
     isFirstChapter = false;
 
-    // Parse Markdown to IR
-    const parseResult = parseMarkdownToIR(md, {
-      autoHeadingNumber: settings.autoHeadingNumber !== false,
-      figureStartIndex: figureCounter,
-      tableStartIndex: tableCounter
-    });
-    figureCounter = parseResult.figureCounter;
-    tableCounter = parseResult.tableCounter;
-
     // Convert IR blocks to docx elements
-    for (const block of parseResult.blocks) {
+    for (const block of ch.blocks) {
       switch (block.type) {
         case 'heading': {
           const headingLevel = block.level === 1 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
           const headingSize = block.level === 1 ? 28 : 24; // 14 pt or 12 pt
+          const spacingBefore = block.level === 1 ? 240 : 180;
+          const spacingAfter = block.level === 1 ? 120 : 80;
+
           bodyChildren.push(new Paragraph({
             heading: headingLevel,
             keepNext: true,
-            spacing: { before: 240, after: 120 },
+            spacing: { before: spacingBefore, after: spacingAfter, line: 360 },
             children: block.runs.map(r => convertRunToDocx(r, makeRun, { size: headingSize, bold: true }))
           }));
           break;
         }
 
         case 'paragraph': {
-          // Body paragraph: first line indent 2 characters (480 twips), 1.5 line spacing (360), justified
+          // Body paragraph: first line indent 2 characters (480 twips), 1.5 line spacing (360), justified, widowControl
           bodyChildren.push(new Paragraph({
             alignment: settings.justify !== false ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
             indent: { firstLine: 480 },
@@ -321,7 +375,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             bodyChildren.push(new Paragraph({
               alignment: AlignmentType.LEFT,
               indent: { left: 480 * (indentLevel + 1), hanging: 240 },
-              spacing: { line: 360, before: 60, after: 60 },
+              spacing: { line: 360, before: 40, after: 40 },
               children: [
                 makeRun(bulletPrefix, { size: 24, bold: item.isOrdered }),
                 ...item.runs.map(r => convertRunToDocx(r, makeRun, { size: 24 }))
@@ -336,6 +390,9 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             alignment: AlignmentType.LEFT,
             indent: { left: 720, right: 360 },
             spacing: { line: 360, before: 120, after: 120 },
+            borders: {
+              left: { style: BorderStyle.SINGLE, size: 24, color: 'ADB5BD' }
+            },
             children: block.runs.map(r => convertRunToDocx(r, makeRun, { size: 22, italics: true }))
           }));
           break;
@@ -365,7 +422,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             bodyChildren.push(new Paragraph({
               alignment: AlignmentType.CENTER,
               keepNext: true,
-              spacing: { before: 240, after: 120 },
+              spacing: { before: 240, after: 100 },
               children: [
                 makeRun(block.caption, { size: 20, bold: true }) // 10 pt
               ]
@@ -381,10 +438,11 @@ export async function buildDocxDocument(project, injectedDocx = null) {
               cantSplit: true,
               children: block.headers.map(h => new TableCell({
                 shading: { type: ShadingType.SOLID, fill: 'EAECEF' },
+                margins: { top: 100, bottom: 100, left: 140, right: 140 },
                 children: [
                   new Paragraph({
                     alignment: getDocxAlignment(h.align, AlignmentType),
-                    spacing: { before: 80, after: 80 },
+                    spacing: { before: 60, after: 60 },
                     children: h.runs.map(r => convertRunToDocx(r, makeRun, { size: 22, bold: true }))
                   })
                 ]
@@ -397,10 +455,11 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             docxRows.push(new TableRow({
               cantSplit: true,
               children: row.map(cell => new TableCell({
+                margins: { top: 80, bottom: 80, left: 140, right: 140 },
                 children: [
                   new Paragraph({
                     alignment: getDocxAlignment(cell.align, AlignmentType),
-                    spacing: { before: 80, after: 80 },
+                    spacing: { before: 60, after: 60 },
                     children: cell.runs.map(r => convertRunToDocx(r, makeRun, { size: 22 }))
                   })
                 ]
@@ -410,6 +469,14 @@ export async function buildDocxDocument(project, injectedDocx = null) {
 
           bodyChildren.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
+              bottom: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
+              left: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
+              right: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: 'D0D3D4' },
+              insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'D0D3D4' }
+            },
             rows: docxRows
           }));
           bodyChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -435,7 +502,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             try {
               bodyChildren.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 240, after: 120 },
+                spacing: { before: 240, after: 100 },
                 keepNext: true,
                 children: [
                   new ImageRun({
@@ -478,11 +545,27 @@ export async function buildDocxDocument(project, injectedDocx = null) {
   // BUILD FULL DOCUMENT OBJECT
   // -------------------------------------------------------------
   const doc = new Document({
+    creator: (cover.members || []).map(m => m.name).join(', ') || '提案團隊',
+    title: cover.titleZh || '專案計劃書',
+    description: cover.category || '大專生專題研究計畫書',
     features: {
       updateFields: true
     },
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: fontConfig,
+            size: 24
+          },
+          paragraph: {
+            spacing: { line: 360, before: 0, after: 0 }
+          }
+        }
+      }
+    },
     sections: [
-      // 1. Cover
+      // 1. Cover Section
       {
         properties: {
           page: {
@@ -491,7 +574,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
         },
         children: coverChildren
       },
-      // 2. TOC
+      // 2. TOC Section
       {
         properties: {
           page: {
@@ -516,7 +599,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
         },
         children: tocChildren
       },
-      // 3. Body
+      // 3. Body Section
       {
         properties: {
           page: {
@@ -585,6 +668,5 @@ function base64ToUint8Array(base64) {
     }
     return uint8Array;
   }
-  // Node.js fallback
   return Uint8Array.from(Buffer.from(base64, 'base64'));
 }
