@@ -13,6 +13,7 @@ import { parseMarkdownToIR, getChineseNumber } from '../js/core/md-parser.js';
 import { irToHtml } from '../js/core/ir-to-html.js';
 import { countWords, validateProject, reviewAsJudge } from '../js/core/validator.js';
 import { createDefaultProject } from '../js/core/sample-data.js';
+import { getProjectChapters, addNewChapter, removeChapter } from '../js/core/guides.js';
 import { buildDocxDocument } from '../js/core/docx-builder.js';
 import { exportProjectToPdf } from '../js/core/pdf-renderer.js';
 
@@ -152,6 +153,26 @@ test('Review As Judge evaluates 7 dimensions and readyToSubmit', () => {
   assert.ok(parseFloat(review.overall.scoreAverage) >= 4.0);
 });
 
+test('Dynamic chapters: modify title, add new chapter, and remove chapter', () => {
+  const proj = createDefaultProject();
+  const chapters = getProjectChapters(proj);
+  assert.strictEqual(chapters.length, 7);
+
+  // Modify title
+  chapters[0].title = '專案核心摘要與成果亮點';
+  assert.strictEqual(getProjectChapters(proj)[0].title, '專案核心摘要與成果亮點');
+
+  // Add chapter
+  const newCh = addNewChapter(proj, '預期經費與設備規劃');
+  assert.strictEqual(newCh.number, '八');
+  assert.strictEqual(getProjectChapters(proj).length, 8);
+
+  // Remove chapter
+  const removed = removeChapter(proj, newCh.key);
+  assert.strictEqual(removed, true);
+  assert.strictEqual(getProjectChapters(proj).length, 7);
+});
+
 console.log('\n=== 4. Word Document Generation (AC-03, AC-05, AC-12) ===');
 
 await runAsyncTest('buildDocxDocument generates valid Buffer with 3 sections', async () => {
@@ -165,6 +186,15 @@ await runAsyncTest('buildDocxDocument generates valid Buffer with 3 sections', a
   assert.strictEqual(buf[1], 0x4b);
   assert.strictEqual(buf[2], 0x03);
   assert.strictEqual(buf[3], 0x04);
+});
+
+await runAsyncTest('buildDocxDocument supports showPageNumber: false option', async () => {
+  const docx = await import('docx');
+  const proj = createDefaultProject();
+  proj.settings.showPageNumber = false;
+  const doc = await buildDocxDocument(proj, docx);
+  const buf = await docx.Packer.toBuffer(doc);
+  assert.ok(buf.length > 10000);
 });
 
 console.log('\n=== 5. PDF Export & High-Fidelity Rendering ===');

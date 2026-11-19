@@ -14,15 +14,15 @@
 </head>
 <body>
 
-  <!-- Top Navigation Bar (Section 4.1) -->
-  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom px-3 py-2 no-print">
+  <!-- Top Navigation Bar (Section 4.1 Slim Compact Navbar) -->
+  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom px-3 py-1 no-print">
     <div class="container-fluid p-0">
-      <a class="navbar-brand d-flex align-items-center text-primary" href="#">
-        <i class="bi bi-journal-text fs-4 me-2"></i>
-        <span>專案計劃書排版工具</span>
+      <a class="navbar-brand d-flex align-items-center text-primary py-0 me-2" href="#">
+        <i class="bi bi-journal-text fs-5 me-1"></i>
+        <span>專案計劃書排版</span>
       </a>
 
-      <div class="d-flex align-items-center me-auto ms-3 d-none d-lg-flex">
+      <div class="d-flex align-items-center me-auto ms-2 d-none d-lg-flex">
         <span class="badge bg-secondary-subtle text-secondary-emphasis me-2" id="nav-project-title">載入中...</span>
         <span class="badge bg-success" id="nav-quality-badge"><i class="bi bi-shield-check me-1"></i>品質檢測中</span>
       </div>
@@ -34,6 +34,14 @@
 
       <!-- Action Buttons -->
       <div class="d-flex align-items-center gap-2">
+        <!-- Page Number Toggle Switch -->
+        <div class="form-check form-switch mb-0 d-flex align-items-center me-1" title="開啟或關閉輸出檔與預覽中的頁尾頁碼">
+          <input class="form-check-input me-1" type="checkbox" id="check-show-page-number" checked />
+          <label class="form-check-label small user-select-none" for="check-show-page-number">頁碼</label>
+        </div>
+
+        <div class="vr d-none d-sm-block"></div>
+
         <!-- Load Sample -->
         <button id="btn-load-sample" class="btn btn-outline-secondary btn-sm" title="載入「智慧農業精準灌溉系統」預設範例">
           <i class="bi bi-journal-bookmark me-1"></i>範例
@@ -55,12 +63,12 @@
 
         <div class="vr d-none d-sm-block"></div>
 
-        <!-- Export DOCX & PDF -->
+        <!-- Export DOCX & Direct PDF -->
         <button id="btn-export-docx" class="btn btn-primary btn-sm fw-bold" title="匯出標準大專生計畫書 Word (.docx) 檔">
           <i class="bi bi-file-earmark-word me-1"></i>匯出 Word
         </button>
-        <button id="btn-export-pdf" class="btn btn-danger btn-sm fw-bold" title="以瀏覽器直接列印或另存為 A4 PDF">
-          <i class="bi bi-file-earmark-pdf me-1"></i>列印 / PDF
+        <button id="btn-export-pdf" class="btn btn-danger btn-sm fw-bold" title="直接下載與即時預覽完全一致的 A4 PDF 檔案">
+          <i class="bi bi-file-earmark-pdf me-1"></i>直接匯出 PDF
         </button>
 
         <!-- Theme Toggle -->
@@ -173,6 +181,20 @@
   <script>
     if (typeof window.docx === 'undefined') {
       document.write('<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"><\/script>');
+    }
+  </script>
+
+  <!-- Load html2canvas & jsPDF for Direct High-Fidelity Client-side PDF Export -->
+  <script src="vendor/html2canvas.min.js"></script>
+  <script>
+    if (typeof window.html2canvas === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script>');
+    }
+  </script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script>
+    if (typeof window.jspdf === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"><\/script>');
     }
   </script>
 

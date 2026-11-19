@@ -28,13 +28,25 @@ body {
 /* -------------------------------------------------------------
    Layout Structure
 ------------------------------------------------------------- */
+.navbar {
+  min-height: 42px;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+}
+
 .navbar-brand {
   font-weight: 700;
   letter-spacing: 0.5px;
+  font-size: 1.05rem;
+}
+
+.navbar .btn-sm {
+  padding: 3px 8px;
+  font-size: 0.84rem;
 }
 
 .main-container {
-  height: calc(100vh - 56px);
+  height: calc(100vh - 42px);
   overflow: hidden;
 }
 
@@ -85,7 +97,8 @@ body {
   font-size: 15px;
   line-height: 1.6;
   resize: vertical;
-  min-height: 380px;
+  min-height: 520px;
+  height: calc(100vh - 290px);
 }
 
 .guide-box {

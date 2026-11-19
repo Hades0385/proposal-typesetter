@@ -3,7 +3,7 @@
  * Implements Section 4.10 (V001 - V010) and Section 7.8
  */
 
-import { SECTIONS_META, EVALUATION_DIMENSIONS } from './guides.js';
+import { SECTIONS_META, EVALUATION_DIMENSIONS, getProjectChapters } from './guides.js';
 import { parseMarkdownToIR } from './md-parser.js';
 
 /**
@@ -67,14 +67,15 @@ export function validateProject(project, targetSection = null) {
   }
 
   // Check sections
+  const chapters = getProjectChapters(project);
   const checkList = targetSection
-    ? SECTIONS_META.filter(s => s.key === targetSection)
-    : SECTIONS_META;
+    ? chapters.filter(s => s.key === targetSection || s.id === targetSection)
+    : chapters;
 
   for (const meta of checkList) {
     const secKey = meta.key;
     const secData = sections[secKey];
-    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
+    const md = (meta.markdown !== undefined ? meta.markdown : (secData && secData.markdown ? secData.markdown : '')).trim();
     const wc = countWords(md);
 
     // V001: 必填章節為空

@@ -4,7 +4,7 @@
  */
 
 import { createDefaultProject } from './core/sample-data.js';
-import { SECTIONS_META } from './core/guides.js';
+import { SECTIONS_META, getProjectChapters, addNewChapter, removeChapter } from './core/guides.js';
 import { countWords, validateProject } from './core/validator.js';
 import { buildDocxDocument } from './core/docx-builder.js';
 import { renderEditor } from './ui/editor.js';
@@ -138,12 +138,24 @@ class ProposalApp {
       this.renderPreview();
     });
 
+    // Page number toggle
+    const checkPageNum = document.getElementById('check-show-page-number');
+    if (checkPageNum) {
+      checkPageNum.checked = this.project.settings?.showPageNumber !== false;
+      checkPageNum.addEventListener('change', e => {
+        if (!this.project.settings) this.project.settings = {};
+        this.project.settings.showPageNumber = e.target.checked;
+        this.saveProjectToStorage();
+        this.renderPreview();
+      });
+    }
+
     // Export DOCX
     document.getElementById('btn-export-docx')?.addEventListener('click', () => this.exportDocx());
 
-    // Export PDF (window.print)
+    // Export PDF (Direct PDF generation, not browser print)
     document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
-      window.print();
+      this.exportPdfDirectly();
     });
 
     // Export JSON
@@ -255,35 +267,43 @@ class ProposalApp {
         </a>
     `;
 
-    // 7 Chapters
-    for (const meta of SECTIONS_META) {
-      const secData = sections[meta.key];
-      const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
+    // Dynamic Chapters (Freely editable & addable)
+    const chapters = getProjectChapters(this.project);
+    for (const ch of chapters) {
+      const md = (ch.markdown || (sections[ch.key] && sections[ch.key].markdown) || '').trim();
       const wc = countWords(md);
 
       let badgeHtml = '';
       if (!md) {
-        badgeHtml = meta.required
+        badgeHtml = ch.required
           ? '<span class="badge bg-secondary">未填</span>'
           : '<span class="badge bg-light text-muted border">選填</span>';
-      } else if (meta.suggestedMin > 0 && wc < meta.suggestedMin) {
+      } else if (ch.suggestedMin > 0 && wc < ch.suggestedMin) {
         badgeHtml = `<span class="badge bg-warning text-dark">${wc}字 (不足)</span>`;
-      } else if (meta.suggestedMax > 0 && wc > meta.suggestedMax) {
+      } else if (ch.suggestedMax > 0 && wc > ch.suggestedMax) {
         badgeHtml = `<span class="badge bg-danger">${wc}字 (超過)</span>`;
       } else {
         badgeHtml = `<span class="badge bg-success">${wc}字</span>`;
       }
 
       html += `
-        <a class="list-group-item list-group-item-action nav-chapter-item py-2 px-3 d-flex justify-content-between align-items-center ${this.activeKey === meta.key ? 'active' : ''}" data-key="${meta.key}">
+        <a class="list-group-item list-group-item-action nav-chapter-item py-2 px-3 d-flex justify-content-between align-items-center ${this.activeKey === ch.key ? 'active' : ''}" data-key="${ch.key}">
           <div class="text-truncate me-1">
-            <span class="text-muted me-1">第${meta.number}章</span>
-            <span>${meta.title}</span>
+            <span class="text-muted me-1">第${ch.number}章</span>
+            <span>${escapeHtml(ch.title)}</span>
           </div>
           ${badgeHtml}
         </a>
       `;
     }
+
+    html += `
+      <div class="p-2 border-top bg-light">
+        <button id="btn-add-chapter" class="btn btn-outline-primary btn-sm w-100">
+          <i class="bi bi-plus-circle me-1"></i>新增章節
+        </button>
+      </div>
+    `;
 
     html += '</div>';
     this.elNavList.innerHTML = html;
@@ -296,6 +316,20 @@ class ProposalApp {
         this.renderEditor();
       });
     });
+
+    // Bind add chapter button
+    const addChapBtn = this.elNavList.querySelector('#btn-add-chapter');
+    if (addChapBtn) {
+      addChapBtn.addEventListener('click', () => {
+        const title = prompt('請輸入新章節名稱：', '新章節');
+        if (title !== null) {
+          const newCh = addNewChapter(this.project, title.trim() || '自訂章節');
+          this.activeKey = newCh.key;
+          this.saveProjectToStorage();
+          this.render();
+        }
+      });
+    }
   }
 
   renderEditor() {
@@ -471,6 +505,80 @@ class ProposalApp {
       });
     });
   }
+
+  async exportPdfDirectly() {
+    const btn = document.getElementById('btn-export-pdf');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>匯出 PDF 中...';
+    }
+
+    try {
+      if (typeof window.html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+        throw new Error('PDF 匯出工具函式庫 (jsPDF / html2canvas) 尚未載入完成，請重新整理頁面後重試！');
+      }
+
+      // Ensure preview is rendered
+      this.renderPreview();
+
+      const sheetContainer = document.getElementById('preview-sheet-container');
+      if (!sheetContainer) throw new Error('找不到預覽容器');
+
+      const pageElements = sheetContainer.querySelectorAll('.a4-page');
+      if (!pageElements.length) throw new Error('預覽中尚無頁面');
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+
+        // Temporarily reset transform scale for crisp 1:1 capture
+        const prevTransform = pageEl.style.transform;
+        pageEl.style.transform = 'none';
+
+        const canvas = await window.html2canvas(pageEl, {
+          scale: 2, // 2x high resolution
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        pageEl.style.transform = prevTransform;
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.96);
+
+        if (i > 0) {
+          pdf.addPage('a4', 'p');
+        }
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      }
+
+      const title = this.project.cover?.titleZh ? this.project.cover.titleZh.replace(/[\\/:*?"<>|]/g, '') : '專案計劃書';
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `${title}_${dateStr}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error('PDF 直接匯出失敗:', err);
+      alert('直接匯出 PDF 失敗：' + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Initialize on DOM ready

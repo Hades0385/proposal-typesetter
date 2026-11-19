@@ -3,7 +3,7 @@
  * Simulates A4 pagination (Section 4.5 & 4.7)
  */
 
-import { SECTIONS_META } from '../core/guides.js';
+import { SECTIONS_META, getProjectChapters } from '../core/guides.js';
 import { parseMarkdownToIR } from '../core/md-parser.js';
 import { irToHtml } from '../core/ir-to-html.js';
 import { formatSubmitDate } from '../core/docx-builder.js';
@@ -93,12 +93,11 @@ export function renderLivePreview(project, container, zoom = 1.0) {
   const chapterEntries = [];
   let figureCounter = 1;
   let tableCounter = 1;
+  const projectChapters = getProjectChapters(project);
 
-  for (const meta of SECTIONS_META) {
-    const secData = sections[meta.key];
-    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
-
-    if (!meta.required && !md) continue;
+  for (const ch of projectChapters) {
+    const md = (ch.markdown || '').trim();
+    if (!ch.required && !md) continue;
 
     const parseRes = parseMarkdownToIR(md, {
       autoHeadingNumber: settings.autoHeadingNumber !== false,
@@ -119,9 +118,11 @@ export function renderLivePreview(project, container, zoom = 1.0) {
       }
     }
 
+    const fullTitle = ch.number ? `${ch.number}、${ch.title}` : ch.title;
+
     chapterEntries.push({
-      meta,
-      title: `${meta.number}、${meta.title}`,
+      meta: ch,
+      title: fullTitle,
       blocks: parseRes.blocks,
       headings,
       htmlContent: irToHtml(parseRes.blocks, images)
@@ -163,6 +164,8 @@ export function renderLivePreview(project, container, zoom = 1.0) {
     simulatedPage += Math.max(1, Math.ceil(roughWords / 800));
   }
 
+  const showPageNumber = settings.showPageNumber !== false;
+
   tocPage.innerHTML = `
     <div class="a4-body">
       <div class="toc-title">目　　錄</div>
@@ -170,7 +173,7 @@ export function renderLivePreview(project, container, zoom = 1.0) {
         ${tocItemsHtml || '<div class="text-muted text-center py-4">章節內容為空時目錄暫無項目</div>'}
       </div>
     </div>
-    <div class="a4-footer">i</div>
+    <div class="a4-footer" style="${showPageNumber ? '' : 'display:none;'}">i</div>
   `;
   container.appendChild(tocPage);
 
@@ -178,7 +181,7 @@ export function renderLivePreview(project, container, zoom = 1.0) {
   // 4. BODY PAGES (PAGINATION SIMULATION)
   // -------------------------------------------------------------
   let currentPageIndex = 1;
-  let currentPage = createEmptyA4Page(currentPageIndex, zoom);
+  let currentPage = createEmptyA4Page(currentPageIndex, zoom, showPageNumber);
   let currentBody = currentPage.querySelector('.a4-body');
   container.appendChild(currentPage);
 
@@ -188,7 +191,7 @@ export function renderLivePreview(project, container, zoom = 1.0) {
     // Chapter page break setting: if enabled and not the first chapter, start new page
     if (cIdx > 0 && settings.chapterPageBreak !== false) {
       currentPageIndex++;
-      currentPage = createEmptyA4Page(currentPageIndex, zoom);
+      currentPage = createEmptyA4Page(currentPageIndex, zoom, showPageNumber);
       currentBody = currentPage.querySelector('.a4-body');
       container.appendChild(currentPage);
     }
@@ -209,7 +212,7 @@ export function renderLivePreview(project, container, zoom = 1.0) {
       // Check forced pagebreak
       if (child.classList.contains('doc-pagebreak-marker')) {
         currentPageIndex++;
-        currentPage = createEmptyA4Page(currentPageIndex, zoom);
+        currentPage = createEmptyA4Page(currentPageIndex, zoom, showPageNumber);
         currentBody = currentPage.querySelector('.a4-body');
         container.appendChild(currentPage);
         child.remove();
@@ -222,7 +225,7 @@ export function renderLivePreview(project, container, zoom = 1.0) {
         // Move overflowing element to next page
         currentBody.removeChild(child);
         currentPageIndex++;
-        currentPage = createEmptyA4Page(currentPageIndex, zoom);
+        currentPage = createEmptyA4Page(currentPageIndex, zoom, showPageNumber);
         currentBody = currentPage.querySelector('.a4-body');
         container.appendChild(currentPage);
         currentBody.appendChild(child);
@@ -231,14 +234,14 @@ export function renderLivePreview(project, container, zoom = 1.0) {
   }
 }
 
-function createEmptyA4Page(pageNumber, zoom = 1.0) {
+function createEmptyA4Page(pageNumber, zoom = 1.0, showPageNumber = true) {
   const page = document.createElement('div');
   page.className = 'a4-page';
   if (zoom !== 1.0) page.style.transform = `scale(${zoom})`;
 
   page.innerHTML = `
     <div class="a4-body"></div>
-    <div class="a4-footer">第 ${pageNumber} 頁</div>
+    <div class="a4-footer" style="${showPageNumber ? '' : 'display:none;'}">第 ${pageNumber} 頁</div>
   `;
   return page;
 }

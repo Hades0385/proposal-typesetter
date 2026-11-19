@@ -366,3 +366,117 @@ export const PROMPTS_DEF = [
     arguments: [{ name: 'section', description: '目前正要撰寫之章節', required: true }]
   }
 ];
+
+const CHINESE_NUMS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '二十一', '二十二', '二十三', '二十四', '二十五'];
+
+export function getChineseNum(n) {
+  if (n <= 25) return CHINESE_NUMS[n - 1] || `${n}`;
+  return `${n}`;
+}
+
+/**
+ * Re-indexes chapter numbers (一、, 二、, 三、...) based on current chapter array order
+ */
+export function reindexChapterNumbers(chapters) {
+  if (!Array.isArray(chapters)) return;
+  chapters.forEach((ch, idx) => {
+    ch.number = getChineseNum(idx + 1);
+  });
+}
+
+/**
+ * Gets chapters array from project, supporting custom additions and title edits
+ */
+export function getProjectChapters(project) {
+  if (!project) return [];
+
+  if (Array.isArray(project.chapters) && project.chapters.length > 0) {
+    // Keep project.sections in sync
+    if (!project.sections) project.sections = {};
+    for (const ch of project.chapters) {
+      if (!project.sections[ch.key]) {
+        project.sections[ch.key] = { markdown: ch.markdown || '' };
+      }
+    }
+    return project.chapters;
+  }
+
+  // Migrate or initialize from SECTIONS_META and project.sections
+  const chapters = SECTIONS_META.map(meta => ({
+    id: meta.key,
+    key: meta.key,
+    number: meta.number,
+    title: meta.title,
+    required: meta.required,
+    suggestedMin: meta.suggestedMin,
+    suggestedMax: meta.suggestedMax,
+    purpose: meta.purpose,
+    mustInclude: meta.mustInclude,
+    avoid: meta.avoid,
+    judgeQuestions: meta.judgeQuestions,
+    outline: meta.outline,
+    formatTips: meta.formatTips,
+    template: meta.template,
+    markdown: (project.sections && project.sections[meta.key] && project.sections[meta.key].markdown !== undefined)
+      ? project.sections[meta.key].markdown
+      : (meta.template || '')
+  }));
+
+  project.chapters = chapters;
+  if (!project.sections) project.sections = {};
+  for (const ch of chapters) {
+    project.sections[ch.key] = { markdown: ch.markdown };
+  }
+
+  return chapters;
+}
+
+/**
+ * Adds a new custom chapter to the project
+ */
+export function addNewChapter(project, customTitle = '自訂章節') {
+  const chapters = getProjectChapters(project);
+  const newIdx = chapters.length + 1;
+  const newNum = getChineseNum(newIdx);
+  const key = `custom_${Date.now()}`;
+
+  const newCh = {
+    id: key,
+    key: key,
+    number: newNum,
+    title: customTitle,
+    required: false,
+    suggestedMin: 0,
+    suggestedMax: 0,
+    purpose: '使用者自訂之專案章節。',
+    mustInclude: ['依專案需求填寫之重點項目'],
+    avoid: ['空泛敘述'],
+    judgeQuestions: ['本章節對整體計畫之貢獻與必要性為何？'],
+    outline: '自由規劃段落與子標題。',
+    formatTips: '按 Enter 換行即分段，自動首行縮排 2 字元。',
+    markdown: ''
+  };
+
+  chapters.push(newCh);
+  if (!project.sections) project.sections = {};
+  project.sections[key] = { markdown: '' };
+  reindexChapterNumbers(chapters);
+  return newCh;
+}
+
+/**
+ * Removes a chapter by key/id
+ */
+export function removeChapter(project, chapterKey) {
+  const chapters = getProjectChapters(project);
+  const idx = chapters.findIndex(c => c.key === chapterKey || c.id === chapterKey);
+  if (idx !== -1) {
+    chapters.splice(idx, 1);
+    if (project.sections && project.sections[chapterKey]) {
+      delete project.sections[chapterKey];
+    }
+    reindexChapterNumbers(chapters);
+    return true;
+  }
+  return false;
+}

@@ -4,7 +4,7 @@
  * Optimized to match the web preview's typesetting, fonts, margins, and page layout
  */
 
-import { SECTIONS_META } from './guides.js';
+import { SECTIONS_META, getProjectChapters } from './guides.js';
 import { parseMarkdownToIR } from './md-parser.js';
 
 // Resolve docx library in both browser and Node
@@ -240,11 +240,11 @@ export async function buildDocxDocument(project, injectedDocx = null) {
   const chapterEntries = [];
   let figureCounter = 1;
   let tableCounter = 1;
+  const projectChapters = getProjectChapters(project);
 
-  for (const meta of SECTIONS_META) {
-    const secData = sections[meta.key];
-    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
-    if (!meta.required && !md) continue;
+  for (const ch of projectChapters) {
+    const md = (ch.markdown || '').trim();
+    if (!ch.required && !md) continue;
 
     const parseResult = parseMarkdownToIR(md, {
       autoHeadingNumber: settings.autoHeadingNumber !== false,
@@ -261,9 +261,11 @@ export async function buildDocxDocument(project, injectedDocx = null) {
       }
     }
 
+    const fullTitle = ch.number ? `${ch.number}、${ch.title}` : ch.title;
+
     chapterEntries.push({
-      meta,
-      title: `${meta.number}、${meta.title}`,
+      meta: ch,
+      title: fullTitle,
       blocks: parseResult.blocks,
       headings
     });
@@ -585,18 +587,20 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             }
           }
         },
-        footers: {
-          default: new Footer({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  makeRun('', { children: [PageNumber.CURRENT], size: 20 })
-                ]
-              })
-            ]
-          })
-        },
+        ...(settings.showPageNumber !== false ? {
+          footers: {
+            default: new Footer({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    makeRun('', { children: [PageNumber.CURRENT], size: 20 })
+                  ]
+                })
+              ]
+            })
+          }
+        } : {}),
         children: tocChildren
       },
       // 3. Body Section
@@ -610,20 +614,22 @@ export async function buildDocxDocument(project, injectedDocx = null) {
             }
           }
         },
-        footers: {
-          default: new Footer({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  makeRun('第 ', { size: 20 }),
-                  makeRun('', { children: [PageNumber.CURRENT], size: 20 }),
-                  makeRun(' 頁', { size: 20 })
-                ]
-              })
-            ]
-          })
-        },
+        ...(settings.showPageNumber !== false ? {
+          footers: {
+            default: new Footer({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    makeRun('第 ', { size: 20 }),
+                    makeRun('', { children: [PageNumber.CURRENT], size: 20 }),
+                    makeRun(' 頁', { size: 20 })
+                  ]
+                })
+              ]
+            })
+          }
+        } : {}),
         children: bodyChildren
       }
     ]

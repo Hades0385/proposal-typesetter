@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { SECTIONS_META } from './guides.js';
+import { SECTIONS_META, getProjectChapters } from './guides.js';
 import { parseMarkdownToIR } from './md-parser.js';
 import { irToHtml } from './ir-to-html.js';
 import { formatSubmitDate } from './docx-builder.js';
@@ -112,12 +112,11 @@ export function generateStandaloneA4Html(project) {
   const chapterEntries = [];
   let figureCounter = 1;
   let tableCounter = 1;
+  const projectChapters = getProjectChapters(project);
 
-  for (const meta of SECTIONS_META) {
-    const secData = sections[meta.key];
-    const md = (secData && secData.markdown) ? secData.markdown.trim() : '';
-
-    if (!meta.required && !md) continue;
+  for (const ch of projectChapters) {
+    const md = (ch.markdown || '').trim();
+    if (!ch.required && !md) continue;
 
     const parseRes = parseMarkdownToIR(md, {
       autoHeadingNumber: settings.autoHeadingNumber !== false,
@@ -134,9 +133,11 @@ export function generateStandaloneA4Html(project) {
       }
     }
 
+    const fullTitle = ch.number ? `${ch.number}、${ch.title}` : ch.title;
+
     chapterEntries.push({
-      meta,
-      title: `${meta.number}、${meta.title}`,
+      meta: ch,
+      title: fullTitle,
       blocks: parseRes.blocks,
       headings,
       htmlContent: irToHtml(parseRes.blocks, images)
