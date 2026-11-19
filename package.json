@@ -1,0 +1,17 @@
+{
+  "name": "t261114",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/all.test.js",
+    "start": "node mcp-server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "^9.16.0"
+  },
+  "type": "module"
+}

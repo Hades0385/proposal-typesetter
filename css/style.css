@@ -1,0 +1,534 @@
+/**
+ * Proposal Typesetter Styles
+ * Follows Typography & Layout Specs in Section 3, 4, and 10
+ */
+
+:root {
+  --app-bg: #f8f9fa;
+  --panel-bg: #ffffff;
+  --border-color: #dee2e6;
+  --text-main: #212529;
+  --sidebar-width: 260px;
+}
+
+[data-bs-theme="dark"] {
+  --app-bg: #121417;
+  --panel-bg: #1e2227;
+  --border-color: #343a40;
+  --text-main: #f8f9fa;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans TC", sans-serif;
+  overflow-x: hidden;
+}
+
+/* -------------------------------------------------------------
+   Layout Structure
+------------------------------------------------------------- */
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.main-container {
+  height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+.column-panel {
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--panel-bg);
+}
+
+.column-panel:last-child {
+  border-right: none;
+}
+
+/* -------------------------------------------------------------
+   Left Sidebar Navigation
+------------------------------------------------------------- */
+.nav-chapter-item {
+  cursor: pointer;
+  border-left: 4px solid transparent !important;
+  transition: all 0.15s ease-in-out;
+}
+
+.nav-chapter-item:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+.nav-chapter-item.active {
+  border-left-color: #0d6efd !important;
+  background-color: rgba(13, 110, 253, 0.1) !important;
+  color: #0d6efd !important;
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------
+   Center Editor Area
+------------------------------------------------------------- */
+.editor-toolbar {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.editor-textarea {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 380px;
+}
+
+.guide-box {
+  background-color: rgba(13, 110, 253, 0.04);
+  border-left: 4px solid #0d6efd;
+  font-size: 13.5px;
+}
+
+/* -------------------------------------------------------------
+   Right Preview & A4 Simulation
+------------------------------------------------------------- */
+.preview-container {
+  background-color: #525659;
+  min-height: 100%;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(33, 37, 41, 0.85);
+  backdrop-filter: blur(4px);
+  padding: 6px 14px;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Simulated A4 Page (Section 3.1 & 4.5) */
+.a4-page {
+  width: 794px;
+  min-height: 1123px;
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  padding: 85px 105px 85px 105px; /* A4 2.54cm top/bot, 3.17cm left/right @96dpi */
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transform-origin: top center;
+  transition: transform 0.2s ease-in-out;
+
+  /* Strict Font Specification: English/Numbers: Times New Roman; Chinese: 標楷體 */
+  font-family: "Times New Roman", "標楷體", "DFKai-SB", "BiauKai", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A4 Content Area */
+.a4-body {
+  flex-grow: 1;
+}
+
+/* A4 Footer */
+.a4-footer {
+  text-align: center;
+  font-size: 10pt;
+  color: #333333;
+  padding-top: 15px;
+  font-family: "Times New Roman", "標楷體", serif;
+}
+
+/* -------------------------------------------------------------
+   Document Typography (Section 3.3)
+------------------------------------------------------------- */
+/* Chapter Title: 16 pt, Bold, Left */
+.doc-chapter-title {
+  font-size: 16pt;
+  font-weight: bold;
+  margin-top: 24px;
+  margin-bottom: 14px;
+  text-align: left;
+  line-height: 1.4;
+  page-break-after: avoid;
+}
+
+/* Section Heading (#): 14 pt, Bold, Left */
+.doc-heading-1 {
+  font-size: 14pt;
+  font-weight: bold;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  text-align: left;
+  line-height: 1.4;
+  page-break-after: avoid;
+}
+
+/* Subsection Heading (##): 12 pt, Bold, Left */
+.doc-heading-2 {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  text-align: left;
+  line-height: 1.4;
+  page-break-after: avoid;
+}
+
+/* Detail Heading (###): 12 pt, Bold, Left */
+.doc-heading-3 {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  text-align: left;
+  line-height: 1.4;
+  page-break-after: avoid;
+}
+
+/* Body Paragraph: 12 pt, 1.5 line height, first line indent 2em */
+.doc-body {
+  font-size: 12pt;
+  line-height: 1.5;
+  text-indent: 2em; /* 首行縮排 2 字元 */
+  text-align: justify;
+  margin-top: 0;
+  margin-bottom: 0;
+  word-break: break-word;
+}
+
+/* List Items: 12 pt, NO first line indent, margin for bullets */
+.doc-list {
+  font-size: 12pt;
+  line-height: 1.5;
+  text-indent: 0 !important;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  padding-left: 28px;
+}
+
+.doc-list li {
+  margin-bottom: 4px;
+}
+
+/* Inline Code */
+.doc-inline-code {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 11pt;
+  background-color: #f1f3f5;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #d63384;
+}
+
+/* Code Block */
+.doc-code {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 10pt;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  text-indent: 0 !important;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Blockquote */
+.doc-quote {
+  border-left: 4px solid #adb5bd;
+  padding-left: 14px;
+  margin: 10px 0;
+  color: #495057;
+  font-style: italic;
+  text-indent: 0 !important;
+  font-size: 11pt;
+  line-height: 1.5;
+}
+
+/* Tables */
+.doc-table-wrapper {
+  margin: 14px 0;
+  text-indent: 0 !important;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11pt;
+  line-height: 1.35;
+  margin-top: 6px;
+}
+
+.doc-table th,
+.doc-table td {
+  border: 1px solid #495057;
+  padding: 6px 10px;
+}
+
+.doc-table th {
+  background-color: #e9ecef;
+  font-weight: bold;
+  text-align: center;
+}
+
+.doc-caption {
+  font-size: 10pt;
+  text-align: center;
+  color: #212529;
+  margin: 4px 0 6px 0;
+  font-weight: normal;
+}
+
+/* Images */
+.doc-figure-wrapper {
+  text-align: center;
+  margin: 16px 0;
+  text-indent: 0 !important;
+}
+
+.doc-figure-img {
+  max-width: 85%;
+  max-height: 380px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.doc-pagebreak-marker {
+  text-align: center;
+  margin: 18px 0;
+  user-select: none;
+}
+
+.doc-hr {
+  border: 0;
+  border-top: 1px solid #999;
+  margin: 16px 0;
+}
+
+/* -------------------------------------------------------------
+   Cover Page Layout (Section 4.2)
+------------------------------------------------------------- */
+.cover-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 95px 105px 95px 105px;
+}
+
+.cover-logo-img {
+  max-width: 110px;
+  max-height: 110px;
+  margin-bottom: 12px;
+}
+
+.cover-org {
+  font-size: 16pt;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+}
+
+.cover-category {
+  font-size: 20pt;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 36px;
+}
+
+.cover-title-zh {
+  font-size: 24pt;
+  font-weight: bold;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.cover-title-en {
+  font-size: 16pt;
+  font-style: italic;
+  font-family: "Times New Roman", serif;
+  color: #333;
+  margin-bottom: 40px;
+}
+
+.cover-info-table {
+  width: 80%;
+  margin: 0 auto 30px auto;
+  font-size: 12pt;
+  line-height: 1.8;
+}
+
+.cover-info-table td {
+  padding: 4px 8px;
+}
+
+.cover-info-table td.label-col {
+  width: 40%;
+  text-align: right;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.cover-info-table td.val-col {
+  width: 60%;
+  text-align: left;
+}
+
+.cover-date {
+  font-size: 14pt;
+  font-weight: bold;
+  margin-top: 30px;
+}
+
+/* -------------------------------------------------------------
+   Table of Contents Layout (Section 4.7)
+------------------------------------------------------------- */
+.toc-title {
+  text-align: center;
+  font-size: 16pt;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+.toc-item {
+  display: flex;
+  align-items: baseline;
+  font-size: 12pt;
+  line-height: 2.0;
+  margin-bottom: 4px;
+}
+
+.toc-item.level-1 {
+  font-weight: bold;
+  font-size: 12.5pt;
+}
+
+.toc-item.level-2 {
+  padding-left: 24px;
+  font-weight: normal;
+}
+
+.toc-item-title {
+  white-space: nowrap;
+}
+
+.toc-item-leader {
+  flex-grow: 1;
+  border-bottom: 1px dotted #888888;
+  margin: 0 8px;
+  position: relative;
+  top: -4px;
+}
+
+.toc-item-page {
+  font-family: "Times New Roman", serif;
+  font-size: 11pt;
+}
+
+/* -------------------------------------------------------------
+   Review as Judge / Validator Panels
+------------------------------------------------------------- */
+.dimension-card {
+  border-left: 4px solid #0d6efd;
+  background: var(--panel-bg);
+}
+
+.dimension-card.score-5 { border-left-color: #198754; }
+.dimension-card.score-4 { border-left-color: #20c997; }
+.dimension-card.score-3 { border-left-color: #ffc107; }
+.dimension-card.score-2 { border-left-color: #fd7e14; }
+.dimension-card.score-1 { border-left-color: #dc3545; }
+
+.issue-item {
+  border-left: 3px solid #6c757d;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.issue-item.error { border-left-color: #dc3545; background: rgba(220, 53, 69, 0.05); }
+.issue-item.warning { border-left-color: #ffc107; background: rgba(255, 193, 7, 0.05); }
+.issue-item.info { border-left-color: #0dcaf0; background: rgba(13, 202, 240, 0.05); }
+
+/* -------------------------------------------------------------
+   Print Styling (window.print() / PDF Output)
+------------------------------------------------------------- */
+@media print {
+  /* Hide all UI elements */
+  body, .main-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .navbar,
+  .column-panel:not(#preview-column),
+  .preview-toolbar,
+  .nav-tabs,
+  .btn,
+  .modal,
+  .no-print {
+    display: none !important;
+  }
+
+  #preview-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    border: none !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  .preview-container {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    display: block !important;
+  }
+
+  .a4-page {
+    width: 100% !important;
+    min-height: 100vh !important;
+    box-shadow: none !important;
+    padding: 2.54cm 3.17cm !important;
+    margin: 0 !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    transform: none !important;
+  }
+
+  .a4-page:last-child {
+    page-break-after: auto !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}
