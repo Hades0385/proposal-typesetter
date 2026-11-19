@@ -3,19 +3,41 @@
  * Generates standalone A4 HTML and converts to high-fidelity PDF via headless browser or LibreOffice
  */
 
-import fs from 'fs';
-import path from 'path';
-import { execFileSync } from 'child_process';
 import { SECTIONS_META, getProjectChapters } from './guides.js';
 import { parseMarkdownToIR } from './md-parser.js';
 import { irToHtml } from './ir-to-html.js';
 import { formatSubmitDate } from './docx-builder.js';
 
+let nodeFs = null;
+let nodePath = null;
+let nodeCp = null;
+
+async function getNodeModules() {
+  if (typeof window !== 'undefined') return null;
+  if (!nodeFs) {
+    try {
+      nodeFs = await import('fs');
+      nodePath = await import('path');
+      nodeCp = await import('child_process');
+    } catch (e) {
+      return null;
+    }
+  }
+  return {
+    fs: nodeFs.default || nodeFs,
+    path: nodePath.default || nodePath,
+    execFileSync: nodeCp.execFileSync
+  };
+}
+
 /**
  * Finds available PDF rendering engine (Edge, Chrome, Chromium, LibreOffice)
  */
-export function findPdfEngine() {
-  const isWin = process.platform === 'win32';
+export async function findPdfEngine() {
+  const deps = await getNodeModules();
+  if (!deps) return null;
+  const { fs } = deps;
+  const isWin = typeof process !== 'undefined' && process.platform === 'win32';
 
   if (isWin) {
     const candidates = [
@@ -193,9 +215,27 @@ export function generateStandaloneA4Html(project) {
       margin-bottom: 25.4mm;
       margin-left: 31.7mm;
       margin-right: 31.7mm;
+      ${settings.showPageNumber !== false ? `
+      @bottom-center {
+        content: "第 " counter(page) " 頁";
+        font-family: "Times New Roman", "標楷體", serif;
+        font-size: 10pt;
+      }
+      ` : `
+      @bottom-center {
+        content: none;
+      }
+      `}
     }
     @page:first {
       margin: 0;
+      @bottom-center {
+        content: none;
+      }
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     body {
       margin: 0;
@@ -302,7 +342,12 @@ export function generateStandaloneA4Html(project) {
  * Converts a project to PDF using available local engine
  */
 export async function exportProjectToPdf(project, outputPath) {
-  const engine = findPdfEngine();
+  const deps = await getNodeModules();
+  if (!deps) {
+    throw new Error('本機 PDF 轉檔功能需在 Node.js 環境下執行');
+  }
+  const { fs, path, execFileSync } = deps;
+  const engine = await findPdfEngine();
   if (!engine) {
     throw new Error('本機未找到可用之 PDF 渲染引擎 (需要 Edge, Chrome 或 LibreOffice)');
   }

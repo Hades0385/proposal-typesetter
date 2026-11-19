@@ -14,8 +14,8 @@ import { irToHtml } from '../js/core/ir-to-html.js';
 import { countWords, validateProject, reviewAsJudge } from '../js/core/validator.js';
 import { createDefaultProject } from '../js/core/sample-data.js';
 import { getProjectChapters, addNewChapter, removeChapter } from '../js/core/guides.js';
-import { buildDocxDocument } from '../js/core/docx-builder.js';
-import { exportProjectToPdf } from '../js/core/pdf-renderer.js';
+import { buildDocxDocument, getImageDimensions, calculateImageDimensions } from '../js/core/docx-builder.js';
+import { exportProjectToPdf, generateStandaloneA4Html } from '../js/core/pdf-renderer.js';
 
 let passed = 0;
 let failed = 0;
@@ -197,7 +197,55 @@ await runAsyncTest('buildDocxDocument supports showPageNumber: false option', as
   assert.ok(buf.length > 10000);
 });
 
+test('Image dimension parser handles PNG, JPEG, and WEBP bytes', () => {
+  // 1. PNG (100x50)
+  const png = Buffer.from('89504E470D0A1A0A0000000D4948445200000064000000320806000000', 'hex');
+  const pngDim = getImageDimensions(png);
+  assert.deepStrictEqual(pngDim, { width: 100, height: 50 });
+
+  // 2. JPEG (300x200)
+  const jpeg = Buffer.from('FFD8FFE000104A46494600010101004800480000FFC000110800C8012C03012200021101031101FFD9', 'hex');
+  const jpegDim = getImageDimensions(jpeg);
+  assert.deepStrictEqual(jpegDim, { width: 300, height: 200 });
+
+  // 3. WEBP (400x250)
+  const webp = Buffer.alloc(32);
+  Buffer.from('RIFF').copy(webp, 0);
+  Buffer.from('WEBP').copy(webp, 8);
+  Buffer.from('VP8 ').copy(webp, 12);
+  webp[26] = 0x90; webp[27] = 0x01; // width 400
+  webp[28] = 0xFA; webp[29] = 0x00; // height 250
+  const webpDim = getImageDimensions(webp);
+  assert.deepStrictEqual(webpDim, { width: 400, height: 250 });
+});
+
+test('calculateImageDimensions preserves original aspect ratio strictly', () => {
+  // Landscape 16:9 (1920x1080)
+  const png169 = Buffer.from('89504E470D0A1A0A0000000D4948445200000780000004380806000000', 'hex');
+  const scaled169 = calculateImageDimensions(png169, 440, 520);
+  assert.strictEqual(scaled169.width, 440);
+  assert.strictEqual(scaled169.height, 248);
+  assert.ok(Math.abs((scaled169.width / scaled169.height) - (1920 / 1080)) < 0.02);
+
+  // Portrait 1:2 (600x1200)
+  const pngPortrait = Buffer.from('89504E470D0A1A0A0000000D4948445200000258000004B00806000000', 'hex');
+  const scaledPortrait = calculateImageDimensions(pngPortrait, 440, 520);
+  assert.strictEqual(scaledPortrait.height, 520);
+  assert.strictEqual(scaledPortrait.width, 260);
+  assert.strictEqual(scaledPortrait.width / scaledPortrait.height, 0.5);
+});
+
 console.log('\n=== 5. PDF Export & High-Fidelity Rendering ===');
+
+test('generateStandaloneA4Html outputs A4 printable HTML with unified styles and no undefined references', () => {
+  const proj = createDefaultProject();
+  const html = generateStandaloneA4Html(proj);
+  assert.ok(html.includes('<!DOCTYPE html>'));
+  assert.ok(html.includes('@page'));
+  assert.ok(html.includes('print-color-adjust: exact'));
+  assert.ok(html.includes('doc-table'));
+  assert.ok(html.includes('智慧農業'));
+});
 
 await runAsyncTest('exportProjectToPdf renders A4 vector PDF', async () => {
   const proj = createDefaultProject();

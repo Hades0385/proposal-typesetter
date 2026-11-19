@@ -67,8 +67,8 @@
         <button id="btn-export-docx" class="btn btn-primary btn-sm fw-bold" title="匯出標準大專生計畫書 Word (.docx) 檔">
           <i class="bi bi-file-earmark-word me-1"></i>匯出 Word
         </button>
-        <button id="btn-export-pdf" class="btn btn-danger btn-sm fw-bold" title="直接下載與即時預覽完全一致的 A4 PDF 檔案">
-          <i class="bi bi-file-earmark-pdf me-1"></i>直接匯出 PDF
+        <button id="btn-export-pdf" class="btn btn-danger btn-sm fw-bold" title="匯出計畫書 A4 PDF（支援直接下載或隔離列印）">
+          <i class="bi bi-file-earmark-pdf me-1"></i>匯出 PDF
         </button>
 
         <!-- Theme Toggle -->
@@ -173,6 +173,56 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- PDF Export Selection Modal -->
+  <div class="modal fade" id="pdfExportModal" tabindex="-1" aria-labelledby="pdfExportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow border-0">
+        <div class="modal-header bg-danger text-white py-2">
+          <h6 class="modal-title d-flex align-items-center mb-0" id="pdfExportModalLabel">
+            <i class="bi bi-file-earmark-pdf-fill me-2 fs-5"></i>匯出 PDF 方式選擇
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <p class="text-secondary small mb-3">請選擇您偏好的 PDF 匯出方式：</p>
+          
+          <div class="d-flex flex-column gap-2">
+            <!-- Option 1: Direct Download -->
+            <button type="button" id="btn-choice-direct-pdf" class="btn btn-outline-primary text-start p-3 border-2 d-flex align-items-start gap-3">
+              <i class="bi bi-cloud-arrow-down-fill fs-2 text-primary flex-shrink-0 mt-1"></i>
+              <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="fw-bold text-dark fs-6">直接下載 PDF 檔案</span>
+                  <span class="badge bg-success">推薦首選</span>
+                </div>
+                <div class="text-secondary small">
+                  在瀏覽器端使用高解析度渲染直接輸出 PDF 檔案，保證版面、標籤、邊界與即時預覽 100% 完全相同。
+                </div>
+              </div>
+            </button>
+
+            <!-- Option 2: Isolated iframe print -->
+            <button type="button" id="btn-choice-iframe-print" class="btn btn-outline-secondary text-start p-3 border d-flex align-items-start gap-3">
+              <i class="bi bi-printer-fill fs-2 text-secondary flex-shrink-0 mt-1"></i>
+              <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="fw-bold text-dark fs-6">獨立 iframe 隔離列印 / 預覽列印</span>
+                  <span class="badge bg-secondary">原生列印</span>
+                </div>
+                <div class="text-secondary small">
+                  將純淨 A4 格式注入隱藏獨立沙盒 iframe，並啟動瀏覽器原生列印視窗，可直接送印或由系統「另存為 PDF」，無任何網頁雜訊。
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        </div>
+      </div>
     </div>
   </div>
 

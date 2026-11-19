@@ -361,17 +361,6 @@ function renderChapterEditor(container, project, secKey, onUpdate) {
           <div class="progress-bar ${barClass}" role="progressbar" style="width: ${percent}%;"></div>
         </div>
       </div>
-        <div class="d-flex justify-content-between align-items-center small mb-1">
-          <span>
-            目前字數：<strong>${currentWords}</strong> 字
-            ${meta.suggestedMin > 0 ? `（建議：${meta.suggestedMin} – ${meta.suggestedMax} 字）` : '（選填無字數限制）'}
-          </span>
-          <span class="badge ${badgeClass}">${statusText}</span>
-        </div>
-        <div class="progress" style="height: 6px;">
-          <div class="progress-bar ${barClass}" role="progressbar" style="width: ${percent}%;"></div>
-        </div>
-      </div>
 
       <!-- Markdown Toolbar (Section 4.1 & 6.1) -->
       <div class="editor-toolbar p-2 rounded mb-2 d-flex flex-wrap gap-1 align-items-center border">

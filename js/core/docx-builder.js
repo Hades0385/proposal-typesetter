@@ -74,6 +74,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
     return new TextRun({
       text,
       font: fontConfig,
+      color: opts.color || '000000',
       ...opts
     });
   }
@@ -92,13 +93,26 @@ export async function buildDocxDocument(project, injectedDocx = null) {
       const imgData = images[cover.logoImageId].dataBase64;
       const cleanB64 = imgData.replace(/^data:[^;]+;base64,/, '');
       const bytes = base64ToUint8Array(cleanB64);
+      const logoDim = getImageDimensions(bytes);
+      let logoW = 110;
+      let logoH = 110;
+      if (logoDim && logoDim.width && logoDim.height) {
+        const logoAspect = logoDim.width / logoDim.height;
+        if (logoAspect >= 1) {
+          logoW = 110;
+          logoH = Math.round(110 / logoAspect);
+        } else {
+          logoH = 110;
+          logoW = Math.round(110 * logoAspect);
+        }
+      }
       coverChildren.push(new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
         children: [
           new ImageRun({
             data: bytes,
-            transformation: { width: 110, height: 110 }
+            transformation: { width: logoW, height: logoH }
           })
         ]
       }));
@@ -472,12 +486,12 @@ export async function buildDocxDocument(project, injectedDocx = null) {
           bodyChildren.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: {
-              top: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
-              bottom: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
-              left: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
-              right: { style: BorderStyle.SINGLE, size: 4, color: '7F8C8D' },
-              insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: 'D0D3D4' },
-              insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'D0D3D4' }
+              top: { style: BorderStyle.SINGLE, size: 6, color: '495057' },
+              bottom: { style: BorderStyle.SINGLE, size: 6, color: '495057' },
+              left: { style: BorderStyle.SINGLE, size: 6, color: '495057' },
+              right: { style: BorderStyle.SINGLE, size: 6, color: '495057' },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: 'CED4DA' },
+              insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'CED4DA' }
             },
             rows: docxRows
           }));
@@ -502,6 +516,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
 
           if (imgBytes) {
             try {
+              const { width: targetW, height: targetH } = calculateImageDimensions(imgBytes, 440, 520);
               bodyChildren.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 240, after: 100 },
@@ -509,7 +524,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
                 children: [
                   new ImageRun({
                     data: imgBytes,
-                    transformation: { width: 450, height: 260 }
+                    transformation: { width: targetW, height: targetH }
                   })
                 ]
               }));
@@ -523,7 +538,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
               alignment: AlignmentType.CENTER,
               spacing: { after: 240 },
               children: [
-                makeRun(block.caption, { size: 20 }) // 10 pt
+                makeRun(block.caption, { size: 20, color: '000000' }) // 10 pt
               ]
             }));
           }
@@ -558,10 +573,35 @@ export async function buildDocxDocument(project, injectedDocx = null) {
         document: {
           run: {
             font: fontConfig,
-            size: 24
+            size: 24,
+            color: '000000'
           },
           paragraph: {
             spacing: { line: 360, before: 0, after: 0 }
+          }
+        },
+        heading1: {
+          run: {
+            font: fontConfig,
+            size: 32,
+            bold: true,
+            color: '000000'
+          }
+        },
+        heading2: {
+          run: {
+            font: fontConfig,
+            size: 28,
+            bold: true,
+            color: '000000'
+          }
+        },
+        heading3: {
+          run: {
+            font: fontConfig,
+            size: 24,
+            bold: true,
+            color: '000000'
           }
         }
       }
@@ -640,6 +680,7 @@ export async function buildDocxDocument(project, injectedDocx = null) {
 
 function convertRunToDocx(r, makeRun, overrides = {}) {
   const props = {
+    color: '000000',
     ...overrides,
     bold: overrides.bold || r.bold,
     italics: overrides.italics || r.italic,
@@ -652,7 +693,8 @@ function convertRunToDocx(r, makeRun, overrides = {}) {
     return new TextRun({
       text: r.text,
       font: { name: 'Consolas' },
-      size: (overrides.size || 24) - 2
+      size: (overrides.size || 24) - 2,
+      color: '000000'
     });
   }
 
@@ -675,4 +717,104 @@ function base64ToUint8Array(base64) {
     return uint8Array;
   }
   return Uint8Array.from(Buffer.from(base64, 'base64'));
+}
+
+/**
+ * Extracts image dimensions (width & height) from Uint8Array bytes
+ * Supports PNG, JPEG, GIF, and WEBP formats without external dependencies
+ */
+export function getImageDimensions(bytes) {
+  if (!bytes || bytes.length < 8) return null;
+
+  // 1. PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    if (bytes.length >= 24) {
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const width = view.getUint32(16, false);
+      const height = view.getUint32(20, false);
+      if (width > 0 && height > 0) return { width, height };
+    }
+  }
+
+  // 2. GIF: 'GIF87a' or 'GIF89a'
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes.length >= 10) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const width = view.getUint16(6, true);
+    const height = view.getUint16(8, true);
+    if (width > 0 && height > 0) return { width, height };
+  }
+
+  // 3. JPEG: FF D8
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8) {
+    let offset = 2;
+    const len = bytes.length;
+    while (offset < len) {
+      if (bytes[offset] !== 0xFF) { offset++; continue; }
+      while (bytes[offset] === 0xFF && offset < len) offset++;
+      if (offset >= len) break;
+      const marker = bytes[offset];
+      offset++;
+      if (marker === 0xD9 || marker === 0xDA) break; // EOI or SOS
+      if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) || (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
+        if (offset + 7 < len) {
+          const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          const height = view.getUint16(offset + 3, false);
+          const width = view.getUint16(offset + 5, false);
+          if (width > 0 && height > 0) return { width, height };
+        }
+        break;
+      } else {
+        if (offset + 2 > len) break;
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const segLen = view.getUint16(offset, false);
+        offset += segLen;
+      }
+    }
+  }
+
+  // 4. WEBP: RIFF....WEBP
+  if (bytes.length >= 30 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    // Lossy VP8
+    if (bytes[12] === 0x56 && bytes[13] === 0x50 && bytes[14] === 0x38 && bytes[15] === 0x20) {
+      const width = ((bytes[27] << 8) | bytes[26]) & 0x3fff;
+      const height = ((bytes[29] << 8) | bytes[28]) & 0x3fff;
+      if (width > 0 && height > 0) return { width, height };
+    }
+    // Lossless VP8L
+    if (bytes[12] === 0x56 && bytes[13] === 0x50 && bytes[14] === 0x38 && bytes[15] === 0x4C) {
+      if (bytes.length >= 25 && bytes[20] === 0x2F) {
+        const b1 = bytes[21], b2 = bytes[22], b3 = bytes[23], b4 = bytes[24];
+        const width = 1 + (((b2 & 0x3F) << 8) | b1);
+        const height = 1 + ((((b4 & 0xF) << 10) | (b3 << 2) | ((b2 & 0xC0) >> 6)));
+        if (width > 0 && height > 0) return { width, height };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculates proportionally scaled dimensions maintaining original aspect ratio
+ */
+export function calculateImageDimensions(bytes, maxWidth = 440, maxHeight = 520) {
+  const dim = getImageDimensions(bytes);
+  if (!dim || !dim.width || !dim.height) {
+    return { width: 440, height: 260 };
+  }
+  const aspect = dim.width / dim.height;
+  let targetWidth = dim.width;
+  let targetHeight = dim.height;
+
+  if (targetWidth > maxWidth || targetHeight > maxHeight) {
+    targetWidth = maxWidth;
+    targetHeight = Math.round(targetWidth / aspect);
+    if (targetHeight > maxHeight) {
+      targetHeight = maxHeight;
+      targetWidth = Math.round(targetHeight * aspect);
+    }
+  }
+  return { width: Math.max(1, targetWidth), height: Math.max(1, targetHeight) };
 }

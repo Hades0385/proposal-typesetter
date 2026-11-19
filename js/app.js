@@ -7,6 +7,7 @@ import { createDefaultProject } from './core/sample-data.js';
 import { SECTIONS_META, getProjectChapters, addNewChapter, removeChapter } from './core/guides.js';
 import { countWords, validateProject } from './core/validator.js';
 import { buildDocxDocument } from './core/docx-builder.js';
+import { generateStandaloneA4Html } from './core/pdf-renderer.js';
 import { renderEditor } from './ui/editor.js';
 import { renderLivePreview } from './ui/preview.js';
 import { renderJudgeView } from './ui/judge-view.js';
@@ -153,9 +154,36 @@ class ProposalApp {
     // Export DOCX
     document.getElementById('btn-export-docx')?.addEventListener('click', () => this.exportDocx());
 
-    // Export PDF (Direct PDF generation, not browser print)
-    document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
+    // Export PDF: Open Selection Modal (Direct Download vs Isolated iframe Print)
+    const exportPdfBtn = document.getElementById('btn-export-pdf');
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', () => {
+        const modalEl = document.getElementById('pdfExportModal');
+        if (modalEl && window.bootstrap) {
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+          modal.show();
+        } else {
+          this.exportPdfDirectly();
+        }
+      });
+    }
+
+    // Modal Option 1: Direct Download
+    document.getElementById('btn-choice-direct-pdf')?.addEventListener('click', () => {
+      const modalEl = document.getElementById('pdfExportModal');
+      if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+      }
       this.exportPdfDirectly();
+    });
+
+    // Modal Option 2: Isolated iframe Print
+    document.getElementById('btn-choice-iframe-print')?.addEventListener('click', () => {
+      const modalEl = document.getElementById('pdfExportModal');
+      if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+      }
+      this.exportPdfIframePrint();
     });
 
     // Export JSON
@@ -567,6 +595,61 @@ class ProposalApp {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
       }
+    }
+  }
+
+  exportPdfIframePrint() {
+    try {
+      const html = generateStandaloneA4Html(this.project);
+
+      // Remove previous isolated print iframe if any
+      let oldIframe = document.getElementById('print-isolation-iframe');
+      if (oldIframe) {
+        oldIframe.remove();
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'print-isolation-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1000px';
+      iframe.style.height = '1000px';
+      iframe.style.border = 'none';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
+      document.body.appendChild(iframe);
+
+      let printed = false;
+      const doPrint = () => {
+        if (printed) return;
+        printed = true;
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (e) {
+          console.error('隔離列印啟動失敗:', e);
+          alert('隔離列印啟動失敗：' + e.message);
+        } finally {
+          setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
+          }, 60000);
+        }
+      };
+
+      iframe.onload = () => {
+        setTimeout(doPrint, 350);
+      };
+
+      iframe.srcdoc = html;
+
+      // Fallback timeout in case onload event was already missed
+      setTimeout(doPrint, 1000);
+    } catch (err) {
+      console.error('產生隔離列印失敗:', err);
+      alert('產生隔離列印失敗：' + err.message);
     }
   }
 }
